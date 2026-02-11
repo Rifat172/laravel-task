@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'yandex_maps_url',
+        'yandex_org_id',
     ];
 
     /**
