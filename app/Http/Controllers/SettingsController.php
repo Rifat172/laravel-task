@@ -34,8 +34,8 @@ class SettingsController extends Controller
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS      => 5,
-            CURLOPT_TIMEOUT        => 5, // 10 многовато для синхронного запроса в контроллере
-            CURLOPT_NOBODY         => true, // Нам нужен только заголовок/URL, тело качать не обязательно
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_NOBODY         => true,
             CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         ]);
 
@@ -51,7 +51,6 @@ class SettingsController extends Controller
         $orgId = null;
 
         if ($finalUrl && $httpCode >= 200 && $httpCode < 400) {
-            // Более гибкий паттерн: ищем число после /org/.../
             if (preg_match('/\/org\/[^\/?]+\/(\d+)(?:[\/?]|$)/i', $finalUrl, $matches)) {
                 $orgId = $matches[1];
             } else {
@@ -76,6 +75,6 @@ class SettingsController extends Controller
 
         return redirect()->route('settings.edit')
             ->with('success', $message)
-            ->with('org_id', $orgId);  // для Vue, если хочешь отдельно выводить
+            ->with('org_id', $orgId);
     }
 }
