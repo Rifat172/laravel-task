@@ -21,7 +21,7 @@ class SettingsController extends Controller
             'yandex_maps_url' => [
                 'nullable',
                 'url',
-                'max:500',
+                'max:2048',
                 function ($attribute, $value, $fail) {
                     if ($value && !str_contains($value, 'yandex.ru/maps')) {
                         $fail('Ссылка должна быть на Яндекс.Карты.');

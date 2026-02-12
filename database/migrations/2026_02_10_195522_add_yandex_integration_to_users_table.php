@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('yandex_maps_url')->nullable()->comment('Полная ссылка на карточку Яндекс.Карт');
+            $table->string('yandex_maps_url', 2048)->nullable()->comment('Полная ссылка на карточку Яндекс.Карт');
         });
     }
 
