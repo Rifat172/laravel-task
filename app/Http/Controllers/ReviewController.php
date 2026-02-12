@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Services\YandexReviewsParser;
 
 class ReviewController extends Controller
 {
@@ -14,16 +16,39 @@ class ReviewController extends Controller
         if (!$yandexUrl) {
             return Inertia::render('Reviews/Index', [
                 'yandex_url' => null,
-                'reviews_data' => null,
+                'initial_data' => null,
             ]);
         }
 
-        $parser = new \App\Services\YandexReviewsParser();
-        $data = $parser->parse($yandexUrl);
+        $parser = new YandexReviewsParser();
+        $data = $parser->parse($yandexUrl, 1);
 
         return Inertia::render('Reviews/Index', [
             'yandex_url'   => $yandexUrl,
-            'reviews_data' => $data,
+            'initial_data' => $data,
+        ]);
+    }
+
+    public function loadMore(Request $request)
+    {
+        $request->validate(
+            [
+                'url'   => 'required|url',
+                'page'  => 'required|integer|min:2',
+            ]
+        );
+
+        $parser = new YandexReviewsParser();
+        $data = $parser->parse($request->url, $request->page);
+
+        if (!$data) {
+            return response()->json(['error' => 'Не удалось загрузить отзывы'], 422);
+        }
+
+        return response()->json([
+            'reviews'        => $data['reviews'] ?? [],
+            'has_more'       => $data['has_more'] ?? false,
+            'current_page'   => $data['current_page'],
         ]);
     }
 }

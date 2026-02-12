@@ -32,7 +32,7 @@ class SettingsController extends Controller
 
         $user = auth()->user();
         $inputUrl = trim($request->yandex_maps_url);
-        $cleanUrl = explode('?', $inputUrl)[0];
+        $cleanUrl = $inputUrl;//explode('?', $inputUrl)[0];
         if (!$cleanUrl) {
             $user->update([
                 'yandex_maps_url' => null,

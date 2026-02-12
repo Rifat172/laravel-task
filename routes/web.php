@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/reviews/load-more', [ReviewController::class, 'loadMore'])->name('reviews.load-more');
 });
 
 require __DIR__ . '/auth.php';

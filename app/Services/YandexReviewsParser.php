@@ -7,8 +7,6 @@ use Symfony\Component\HttpClient\HttpClient;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
-use function PHPUnit\Framework\isNull;
-
 class YandexReviewsParser
 {
     protected $httpClient;
@@ -25,43 +23,83 @@ class YandexReviewsParser
             'timeout' => 15,
         ]);
     }
-
+    private function extractOrgIdFromReviewsUrl(string $pathOrUrl): ?string
+    {
+        if (preg_match('#/(\d{9,})(?:/|\?|$)#', $pathOrUrl, $m)) {
+            return $m[1];
+        }
+        return null;
+    }
+    private function getMainPageCrawler(string $inputUrl): ?Crawler
+    {
+        try {
+            $response = $this->httpClient->request('GET', $inputUrl);
+            if ($response->getStatusCode() !== 200) return null;
+            return new Crawler($response->getContent());
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+    private function parseAndEnrich(Crawler $crawler, int $page): array
+    {
+        $data = $this->parseReviewsPage($crawler);
+        $data['current_page'] = $page;
+        $data['has_more'] = $page < ($data['pages_count'] ?? 1);
+        return $data;
+    }
     /**
      * Основной метод — парсит отзывы по любой ссылке на Яндекс.Карты
      */
-    public function parse(string $inputUrl): ?array
+    public function parse(string $inputUrl, $page = 1): ?array
     {
-        $cacheKey = 'yandex_reviews_' . md5($inputUrl);
+        $baseUrl = Cache::get("yandex_reviews_baseurl_" . md5($inputUrl));
 
-        return Cache::remember($cacheKey, now()->addHours(6), function () use ($inputUrl) {
+        if ($baseUrl) {
+            $inputUrl = 'https://yandex.ru' . $baseUrl;
+        }
+        $orgId = null;
+
+        if (str_contains($inputUrl, '/reviews/')) {
+            $orgId = $this->extractOrgIdFromReviewsUrl($inputUrl);
+        }
+
+        if (!$orgId && $page === 1) {
+            $tempCrawler = $this->getMainPageCrawler($inputUrl);
+            if ($tempCrawler) {
+                $reviewsTab = $tempCrawler->filter('.tabs-select-view__title._name_reviews a')->first();
+                if ($reviewsTab->count()) {
+                    $reviewsPath = $reviewsTab->attr('href');
+                    if ($page === 1 && str_starts_with($inputUrl, 'https://yandex.ru/maps/')) {
+                        Cache::rememberForever(
+                            "yandex_reviews_baseurl_" . md5($inputUrl),
+                            fn() => $reviewsPath
+                        );
+                    }
+                    $orgId = $this->extractOrgIdFromReviewsUrl($reviewsPath);
+                }
+            }
+        }
+
+        $cacheBase = $orgId ? "org_{$orgId}" : md5($inputUrl);
+        $cacheKey = "yandex_reviews_{$page}_{$cacheBase}";
+
+        return Cache::remember($cacheKey, now()->addHours(6), function () use ($inputUrl, $page, $orgId) {
             try {
-                Log::info('Yandex: парсим финальный URL', ['url' => $inputUrl]);
-
-                // 1. Делаем запрос на финальную страницу
-                $response = $this->httpClient->request('GET', $inputUrl);
-                if ($response->getStatusCode() !== 200) {
-                    Log::warning('Yandex: страница не загрузилась', ['status' => $response->getStatusCode()]);
-                    return null;
+                if ($orgId && $page > 1) {
+                    $reviewsUrl = $inputUrl;
+                } else {
+                    $crawler = $this->getReviewsPageCrawler($inputUrl, $page);
+                    if (!$crawler) return null;
+                    return $this->parseAndEnrich($crawler, $page);
                 }
 
-                $html = $response->getContent();
-                $crawler = new Crawler($html);
+                $response = $this->httpClient->request('GET', $reviewsUrl);
+                if ($response->getStatusCode() !== 200) return null;
 
-                // 2. Пытаемся парсить как страницу отзывов
-                $data = $this->parseReviewsPage($crawler);
-
-                // Если ничего не нашли — пробуем найти ссылку на отзывы и парсить её
-                if (isNull($data['reviews'])) {
-                    Log::info('Yandex: ничего не нашли на странице, ищем таб отзывов');
-                    $data = $this->tryParseReviewsTab($crawler);
-                }
-                Log::info('Yandex парсинг результат', $data);
-                return $data;
+                $crawler = new Crawler($response->getContent());
+                return $this->parseAndEnrich($crawler, $page);
             } catch (\Exception $e) {
-                Log::error('Yandex Reviews Parser exception', [
-                    'message' => $e->getMessage(),
-                    'url'     => $inputUrl,
-                ]);
+                Log::error('Yandex parse failed', ['url' => $inputUrl, 'page' => $page, 'error' => $e->getMessage()]);
                 return null;
             }
         });
@@ -77,6 +115,7 @@ class YandexReviewsParser
             'reviews_count' => null,
             'ratings_count' => null,
             'reviews'       => [],
+            'pages_count'   => null,
         ];
 
         // Рейтинг
@@ -107,6 +146,7 @@ class YandexReviewsParser
             $data['reviews_count'] = $m[1] ?? null;
         }
 
+        $data['pages_count'] = ceil($data['reviews_count'] / 50);
         // Отзывы
         $reviews = [];
         $listContainer = $crawler->filter('.business-reviews-card-view__reviews-container')->first();
@@ -143,43 +183,35 @@ class YandexReviewsParser
     /**
      * Если на странице не нашли отзывы — ищем таб "Отзывы" и парсим его ссылку
      */
-    private function tryParseReviewsTab(Crawler $crawler): array
+    private function getReviewsPageCrawler(string $inputUrl, int $page): ?Crawler
     {
-        $data = [
-            'rating'        => [],
-            'reviews_count' => null,
-            'ratings_count' => null,
-            'reviews'       => [],
-        ];
+        if (str_contains($inputUrl, '/reviews/') || str_contains($inputUrl, '?page=')) {
+            $url = $inputUrl;
+        } else {
+            // Ищем таб "Отзывы"
+            $response = $this->httpClient->request('GET', $inputUrl);
+            if ($response->getStatusCode() !== 200) return null;
 
-        // Ищем ссылку на отзывы
-        $reviewsTab = $crawler->filter('.tabs-select-view__title._name_reviews a')->first();
-        if ($reviewsTab->count() === 0) {
-            Log::warning('Yandex: таб отзывов не найден');
-            return $data;
-        }
+            $crawler = new Crawler($response->getContent());
+            $reviewsTab = $crawler->filter('.tabs-select-view__title._name_reviews a')->first();
 
-        $reviewsPath = $reviewsTab->attr('href');
-        $reviewsUrl = $reviewsPath ? 'https://yandex.ru' . $reviewsPath : null;
-
-        if (!$reviewsUrl) {
-            return $data;
-        }
-
-        Log::info('Yandex: найден таб отзывов', ['url' => $reviewsUrl]);
-
-        try {
-            $response = $this->httpClient->request('GET', $reviewsUrl);
-            if ($response->getStatusCode() !== 200) {
-                return $data;
+            if ($reviewsTab->count() === 0) {
+                Log::warning('Таб отзывов не найден', ['url' => $inputUrl]);
+                return null;
             }
 
-            $html = $response->getContent();
-            $crawler = new Crawler($html);
-            return $this->parseReviewsPage($crawler);
-        } catch (\Exception $e) {
-            Log::error('Yandex: парсинг таба отзывов failed', ['error' => $e->getMessage()]);
-            return $data;
+            $reviewsPath = $reviewsTab->attr('href');
+            $url = 'https://yandex.ru' . $reviewsPath;
         }
+
+        $urlWithPage = $url . (str_contains($url, '?') ? '&' : '?') . 'page=' . $page;
+
+        $response = $this->httpClient->request('GET', $urlWithPage);
+        if ($response->getStatusCode() !== 200) {
+            Log::warning('Не удалось загрузить страницу отзывов', ['url' => $urlWithPage]);
+            return null;
+        }
+
+        return new Crawler($response->getContent());
     }
 }
