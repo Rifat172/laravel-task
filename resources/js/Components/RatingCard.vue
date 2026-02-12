@@ -5,7 +5,6 @@ const props = defineProps({
     rating: [Array, Number, null],
     reviewsCount: [Number, String, null],
     ratingsCount: [Number, String, null],
-    orgId: [String, Number, null],
 })
 
 const displayRating = computed(() => {
@@ -16,8 +15,7 @@ const displayRating = computed(() => {
 })
 
 const fullStars = computed(() => Math.floor(displayRating.value ?? 0))
-const hasHalfStar = computed(() => (displayRating.value ?? 0) % 1 >= 0.5)
-const emptyStars = computed(() => 5 - fullStars.value - (hasHalfStar.value ? 1 : 0))
+const emptyStars = computed(() => 5 - fullStars.value)
 </script>
 
 <template>
@@ -30,7 +28,6 @@ const emptyStars = computed(() => 5 - fullStars.value - (hasHalfStar.value ? 1 :
                     </div>
                     <div class="flex items-center gap-0.5 text-yellow-400 text-3xl md:text-4xl">
                         <span v-for="i in fullStars" :key="'full-' + i">★</span>
-                        <span v-if="hasHalfStar">½</span>
                         <span v-for="i in emptyStars" :key="'empty-' + i" class="text-gray-300 opacity-50">★</span>
                     </div>
                 </div>

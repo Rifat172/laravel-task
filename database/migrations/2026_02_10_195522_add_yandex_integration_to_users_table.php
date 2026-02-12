@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->string('yandex_maps_url')->nullable()->comment('Полная ссылка на карточку Яндекс.Карт');
-            $table->string('yandex_org_id')->nullable()->comment('ID организации из Яндекс.Карт');
         });
     }
 

@@ -3,9 +3,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Sidebar from '@/Components/Sidebar.vue' // или '@/Layouts/Sidebar.vue'
 import RatingCard from '@/Components/RatingCard.vue'
 import ReviewCard from '@/Components/ReviewCard.vue'
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
-  org_id: [String, Number, null],
   reviews_data: Object | null,
   yandex_url: String | null, 
 })
@@ -33,7 +33,7 @@ console.debug(props);
             <h2 class="text-sm text-gray-900">Яндекс Карты</h2>
           </a>
 
-          <div v-if="!org_id" class="text-center py-20 text-gray-600 bg-white rounded-2xl shadow">
+          <div v-if="!reviews_data" class="text-center py-20 text-gray-600 bg-white rounded-2xl shadow">
             <p class="text-xl mb-6">Интеграция с Яндекс Картами не настроена</p>
             <Link :href="route('settings.edit')"
               class="inline-flex items-center px-8 py-4 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700">
@@ -54,7 +54,7 @@ console.debug(props);
             <!-- Карточка рейтинга справа -->
             <aside class="w-full lg:w-80 flex-shrink-0">
               <RatingCard :rating="reviews_data.rating" :reviews-count="reviews_data.reviews_count"
-                :ratings-count="reviews_data.ratings_count" :org-id="org_id" />
+                :ratings-count="reviews_data.ratings_count"/>
             </aside>
           </div>
         </div>

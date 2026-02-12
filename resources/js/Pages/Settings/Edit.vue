@@ -17,7 +17,11 @@ const form = useForm({
 
 const submit = () => {
   form.post(route('settings.update'), {
-    onSuccess: () => form.reset(),
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      form.reset({ yandex_maps_url: props.user.yandex_maps_url || '' })
+    },
   })
 }
 </script>
