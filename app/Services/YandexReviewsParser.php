@@ -13,9 +13,9 @@ class YandexReviewsParser
 
     private static array $userAgents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+        // 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        // 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        // 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
     ];
 
     public function __construct()
@@ -91,7 +91,7 @@ class YandexReviewsParser
         return Cache::remember($cacheKey, now()->addHours(6), function () use ($inputUrl, $page, $orgId) {
             try {
                 if ($orgId && $page > 1) {
-                    $reviewsUrl = $inputUrl.'?page='.$page;
+                    $reviewsUrl = $inputUrl . '?page=' . $page;
                 } else {
                     $crawler = $this->getReviewsPageCrawler($inputUrl, $page);
                     if (!$crawler) return null;
@@ -125,6 +125,7 @@ class YandexReviewsParser
 
         // Рейтинг
         $ratingParts = [];
+        usleep(200000);
         $crawler->filter('.business-summary-rating-badge-view__rating-text')
             ->each(function (Crawler $node) use (&$ratingParts) {
                 $text = trim($node->text());
@@ -142,7 +143,7 @@ class YandexReviewsParser
             preg_match('/(\d+)/', $counterNode->text(), $m);
             $data['ratings_count'] = $m[1] ?? null;
         }
-
+        usleep(200000);
         // Количество отзывов
         $headerNode = $crawler->filter('.card-section-header__title._wide')->first();
 
@@ -154,6 +155,7 @@ class YandexReviewsParser
         $data['pages_count'] = ceil($data['reviews_count'] / 50);
         // Отзывы
         $reviews = [];
+        usleep(200000);
         $listContainer = $crawler->filter('.business-reviews-card-view__reviews-container')->first();
         if ($listContainer->count() > 0) {
             $listContainer->filter('.business-review-view')->each(function (Crawler $node) use (&$reviews) {

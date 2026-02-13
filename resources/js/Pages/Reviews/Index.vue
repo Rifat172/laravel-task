@@ -4,7 +4,7 @@ import Sidebar from '@/Components/Sidebar.vue'
 import RatingCard from '@/Components/RatingCard.vue'
 import ReviewCard from '@/Components/ReviewCard.vue'
 import { Link } from '@inertiajs/vue3'
-
+import { nextTick } from 'vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 import axios from 'axios'
@@ -41,7 +41,7 @@ const loadMore = async () => {
     })
 
     const data = response.data
-
+    
     reviews.value = [...reviews.value, ...data.reviews]
     currentPage.value = data.current_page
     hasMore.value = data.has_more
@@ -76,7 +76,6 @@ const checkIfTriggerAlreadyVisible = () => {
   const rect = trigger.getBoundingClientRect()
   const windowHeight = window.innerHeight
 
-  // Если триггер уже в видимой области (с запасом)
   if (rect.top <= windowHeight + 200 && rect.bottom >= 0) {
     loadMore()
   }
@@ -85,25 +84,28 @@ const checkIfTriggerAlreadyVisible = () => {
 onMounted(async () => {
   if (!hasMore.value) return
 
+  - window.addEventListener('scroll', checkScrollPosition, { passive: true })
+
   observer = new IntersectionObserver(
     entries => {
-      if (entries[0].isIntersecting) {
+      if (entries[0].isIntersecting && !loading.value) {
         loadMore()
       }
     },
     {
       root: null,
-      rootMargin: '0px 0px 600px 0px',
-      threshold: 0.1
+      rootMargin: '0px 0px 800px 0px',
+      threshold: 0.01
     }
   )
 
   if (loadMoreTrigger.value) {
     observer.observe(loadMoreTrigger.value)
+
     await nextTick()
+    await new Promise(r => setTimeout(r, 300))
     checkIfTriggerAlreadyVisible()
   }
-  window.addEventListener('scroll', checkScrollPosition, { passive: true })
 })
 
 onUnmounted(() => {
