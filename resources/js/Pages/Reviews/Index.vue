@@ -53,7 +53,36 @@ const loadMore = async () => {
   }
 }
 
-onMounted(() => {
+const checkScrollPosition = () => {
+  if (!hasMore.value || loading.value) return
+
+  const trigger = loadMoreTrigger.value
+  if (!trigger) return
+
+  const rect = trigger.getBoundingClientRect()
+  const windowHeight = window.innerHeight
+
+  if (rect.top <= windowHeight + 300) {
+    loadMore()
+  }
+}
+
+const checkIfTriggerAlreadyVisible = () => {
+  if (!hasMore.value || loading.value) return
+
+  const trigger = loadMoreTrigger.value
+  if (!trigger) return
+
+  const rect = trigger.getBoundingClientRect()
+  const windowHeight = window.innerHeight
+
+  // Если триггер уже в видимой области (с запасом)
+  if (rect.top <= windowHeight + 200 && rect.bottom >= 0) {
+    loadMore()
+  }
+}
+
+onMounted(async () => {
   if (!hasMore.value) return
 
   observer = new IntersectionObserver(
@@ -62,15 +91,23 @@ onMounted(() => {
         loadMore()
       }
     },
-    { threshold: 0.1 }
+    {
+      root: null,
+      rootMargin: '0px 0px 600px 0px',
+      threshold: 0.1
+    }
   )
 
   if (loadMoreTrigger.value) {
     observer.observe(loadMoreTrigger.value)
+    await nextTick()
+    checkIfTriggerAlreadyVisible()
   }
+  window.addEventListener('scroll', checkScrollPosition, { passive: true })
 })
 
 onUnmounted(() => {
+  window.removeEventListener('scroll', checkScrollPosition)
   if (observer) observer.disconnect()
 })
 </script>
@@ -112,19 +149,13 @@ onUnmounted(() => {
             <!-- Список отзывов -->
             <div class="flex-1 space-y-6">
               <ReviewCard v-for="(review, index) in reviews" :key="index" :review="review" />
-            </div>
-
-            <div v-if="hasMore || loading" ref="loadMoreTrigger" class="py-8 text-center">
-              <div v-if="loading"
-                class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 rounded-full border-t-transparent">
+              <div v-if="hasMore || loading" ref="loadMoreTrigger" class="py-8 text-center">
+                <div v-if="loading"
+                  class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 rounded-full border-t-transparent">
+                </div>
+                <div v-else-if="error" class="text-red-600">{{ error }}</div>
               </div>
-              <div v-else-if="error" class="text-red-600">{{ error }}</div>
             </div>
-
-            <div v-if="!hasMore && reviews.length > 0" class="text-center py-6 text-gray-500">
-              Все отзывы загружены
-            </div>
-
             <!-- Карточка рейтинга справа -->
             <aside class="w-full lg:w-80 flex-shrink-0">
               <RatingCard :rating="rating" :reviews-count="reviewsCount" :ratings-count="ratingsCount" />

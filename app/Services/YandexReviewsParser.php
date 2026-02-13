@@ -91,7 +91,7 @@ class YandexReviewsParser
         return Cache::remember($cacheKey, now()->addHours(6), function () use ($inputUrl, $page, $orgId) {
             try {
                 if ($orgId && $page > 1) {
-                    $reviewsUrl = $inputUrl;
+                    $reviewsUrl = $inputUrl.'?page='.$page;
                 } else {
                     $crawler = $this->getReviewsPageCrawler($inputUrl, $page);
                     if (!$crawler) return null;
