@@ -4,24 +4,21 @@
 
 ## 🚀 Быстрый запуск
 
-### 1. Клонируйте репозиторий
 ```bash
-git clone <ваш-репозиторий>
-cd <название-папки>
+git clone https://github.com/Rifat172/laravel-task.git
+cd laravel-task
 
 cp .env.example .env
 
 # Первый запуск (сборка образа)
 docker compose up -d --build
 
-# Обычный запуск в будущем
-docker compose up -d
+# Установка зависимостей
+docker compose exec app composer install --no-interaction --optimize-autoloader
 
-# Генерация ключа приложения
+# Laravel настройки
 docker compose exec app php artisan key:generate
-
-# Выполнение миграций
 docker compose exec app php artisan migrate
 
-# (Опционально) Заполнение тестовыми данными
-docker compose exec app php artisan db:seed
+# Остановить контейнеры (данные сохраняются)
+docker compose stop
