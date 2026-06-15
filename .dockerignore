@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+node_modules
+tests
+storage/*.log
+bootstrap/cache/*.php
+docker-compose.yml
+Dockerfile
+README.md

@@ -1,28 +1,55 @@
-*.log
-.DS_Store
+# ==================== Основное ====================
 .env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-/.fleet
-/.idea
-/.nova
-/.phpunit.cache
-/.vscode
-/.zed
-/auth.json
+.env.*
+!.env.example
+
+# ==================== Зависимости ====================
 /node_modules
-/public/build
-/public/hot
-/public/storage
+/vendor
+
+# ==================== Composer Cache ====================
+.composer/
+
+# ==================== Laravel ====================
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+/bootstrap/cache/*.php
 /storage/*.key
 /storage/pail
-/vendor
+
+# ==================== Vite / Vue ====================
+/public/build/assets/*.U
+/public/build/.vite
+/public/hot
+/public/build/manifest.json.bak
+/public/build/*.hot-update.*
+
+# ==================== Сборка и публичные файлы ====================
+/public/storage
+/public/hot
+
+# ==================== IDE и редакторы ====================
+.DS_Store
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+
+# ==================== Логи ====================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==================== Разное ====================
 Homestead.json
 Homestead.yaml
 Thumbs.db
 public_html
-u90808uk.beget.tech.error.log.20260210
-u90808uk.beget.tech.error.log.20260211
-u90808uk.beget.tech.error.log.20260212
